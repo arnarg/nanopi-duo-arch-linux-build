@@ -1,0 +1,153 @@
+diff -ruN u-boot/arch/arm/dts/Makefile u-boot_new/arch/arm/dts/Makefile
+--- u-boot/arch/arm/dts/Makefile	2018-10-16 19:37:36.148754635 +0000
++++ u-boot_new/arch/arm/dts/Makefile	2018-10-16 19:42:47.657915029 +0000
+@@ -366,6 +366,7 @@
+ 	sun8i-h2-plus-libretech-all-h3-cc.dtb \
+ 	sun8i-h2-plus-orangepi-r1.dtb \
+ 	sun8i-h2-plus-orangepi-zero.dtb \
++	sun8i-h2-plus-nanopi-duo.dtb \
+ 	sun8i-h3-bananapi-m2-plus.dtb \
+ 	sun8i-h3-libretech-all-h3-cc.dtb \
+ 	sun8i-h3-nanopi-m1.dtb \
+diff -ruN u-boot/arch/arm/dts/sun8i-h2-plus-nanopi-duo.dts u-boot_new/arch/arm/dts/sun8i-h2-plus-nanopi-duo.dts
+--- u-boot/arch/arm/dts/sun8i-h2-plus-nanopi-duo.dts	1970-01-01 00:00:00.000000000 +0000
++++ u-boot_new/arch/arm/dts/sun8i-h2-plus-nanopi-duo.dts	2018-10-16 20:40:44.090532654 +0000
+@@ -0,0 +1,113 @@
++/*
++ * Copyright (C) 2016 James Pettigrew <james@innovum.com.au>
++ *
++ * This file is dual-licensed: you can use it either under the terms
++ * of the GPL or the X11 license, at your option. Note that this dual
++ * licensing only applies to this file, and not this project as a
++ * whole.
++ *
++ *  a) This file is free software; you can redistribute it and/or
++ *     modify it under the terms of the GNU General Public License as
++ *     published by the Free Software Foundation; either version 2 of the
++ *     License, or (at your option) any later version.
++ *
++ *     This file is distributed in the hope that it will be useful,
++ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *     GNU General Public License for more details.
++ *
++ * Or, alternatively,
++ *
++ *  b) Permission is hereby granted, free of charge, to any person
++ *     obtaining a copy of this software and associated documentation
++ *     files (the "Software"), to deal in the Software without
++ *     restriction, including without limitation the rights to use,
++ *     copy, modify, merge, publish, distribute, sublicense, and/or
++ *     sell copies of the Software, and to permit persons to whom the
++ *     Software is furnished to do so, subject to the following
++ *     conditions:
++ *
++ *     The above copyright notice and this permission notice shall be
++ *     included in all copies or substantial portions of the Software.
++ *
++ *     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++ *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
++ *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
++ *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
++ *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++ *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
++ *     OTHER DEALINGS IN THE SOFTWARE.
++ */
++
++#include "sun8i-h3-nanopi.dtsi"
++
++/ {
++	model = "FriendlyElec NanoPi-Duo";
++	compatible = "friendlyarm,nanopi-duo", "allwinner,sun8i-h3";
++
++	aliases {
++		xr819 = &xr819wifi;
++		ethernet0 = &emac;
++		ethernet1 = &xr819wifi;
++	};
++
++	vdd_wifi: vdd_wifi {
++		compatible = "regulator-fixed";
++		regulator-name = "wifi";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		gpio = <&r_pio 0 7 GPIO_ACTIVE_HIGH>;				// GPIOL7/WIFI_POWER_EN
++		startup-delay-us = <70000>;
++		enable-active-high;
++	};
++
++	wifi_pwrseq: wifi_pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		pinctrl-names = "default";
++		pinctrl-0 = <&wifi_en_npi>;
++		reset-gpios = <&pio 6 13 GPIO_ACTIVE_LOW>;		  // GPIOG13/WL_RESTN
++		post-power-on-delay-ms = <50>;
++	};
++};
++
++&emac {
++	phy-handle = <&int_mii_phy>;
++	phy-mode = "mii";
++	allwinner,leds-active-low;
++	status = "okay";
++};
++
++&mmc1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&mmc1_pins>;
++	vqmmc-supply = <&vdd_wifi>;
++	vmmc-supply = <&reg_vcc3v3>;
++	mmc-pwrseq = <&wifi_pwrseq>;
++	bus-width = <4>;
++	non-removable;
++	status = "okay";
++
++	xr819wifi: xr819wifi@1 {
++		reg = <1>;
++		compatible = "xradio,xr819";
++		pinctrl-names = "default";
++		pinctrl-0 = <&wifi_wake>;
++		interrupt-parent = <&pio>;
++		interrupts = <6 10 IRQ_TYPE_EDGE_RISING>;
++		interrupt-names = "host-wake";
++		local-mac-address = [ 00 00 00 00 00 00 ];
++	};
++};
++
++&pio {
++	wifi_wake: wifi_wake@0 {
++		pins = "PG10";
++		function = "irq";
++		pull = <SUN4I_PINCTRL_NO_PULL>;
++	};
++	wifi_en_npi: wifi_en_pin {
++		pins = "PG13";
++		function = "gpio_out";
++	};
++};
+diff -ruN u-boot/configs/nanopi_duo_defconfig u-boot_new/configs/nanopi_duo_defconfig
+--- u-boot/configs/nanopi_duo_defconfig	1970-01-01 00:00:00.000000000 +0000
++++ u-boot_new/configs/nanopi_duo_defconfig	2018-10-16 19:40:58.668874916 +0000
+@@ -0,0 +1,21 @@
++CONFIG_ARM=y
++CONFIG_ARCH_SUNXI=y
++CONFIG_SYS_TEXT_BASE=0x4a000000
++CONFIG_SPL_SPI_FLASH_SUPPORT=y
++CONFIG_MACH_SUN8I_H3=y
++CONFIG_DRAM_CLK=408
++CONFIG_DRAM_ZQ=3881979
++CONFIG_DRAM_ODT_EN=y
++# CONFIG_VIDEO_DE2 is not set
++CONFIG_DEFAULT_DEVICE_TREE="sun8i-h2-plus-nanopi-duo"
++# CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
++CONFIG_CONSOLE_MUX=y
++CONFIG_SPL=y
++CONFIG_SYS_CLK_FREQ=480000000
++# CONFIG_CMD_IMLS is not set
++# CONFIG_CMD_FLASH is not set
++# CONFIG_CMD_FPGA is not set
++CONFIG_SPL_SPI_SUNXI=y
++CONFIG_SUN8I_EMAC=y
++CONFIG_USB_EHCI_HCD=y
++CONFIG_SYS_USB_EVENT_POLL_VIA_INT_QUEUE=y
