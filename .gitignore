@@ -1,1 +1,4 @@
 u-boot/
+tmp/
+out/
+ArchLinuxARM-armv7-latest.tar.gz
