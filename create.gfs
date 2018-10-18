@@ -12,8 +12,6 @@ part-set-mbr-id /dev/sda 2 0x83
 mkfs ext3 /dev/sda1 label:boot
 mkfs ext4 /dev/sda2 label:linux-root
 
-list-filesystems
-
 # Setup boot and root
 mount /dev/sda2 /
 mkdir /boot

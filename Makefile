@@ -4,29 +4,31 @@ UBOOT_TAG ?= v2018.09
 BOARD_TARGET ?= nanopi-duo
 TOOLCHAIN ?= arm-none-eabi-
 
-UBOOT_OUTPUT_DIR ?= $(CURDIR)/tmp/u-boot-${BOARD_TARGET}
-UBOOT_MAKE ?= make -C $(UBOOT_DIR) KBUILD_OUTPUT=$(UBOOT_OUTPUT_DIR) CROSS_COMPILE="$(TOOLCHAIN)"
+OUTPUT_DIR ?= $(CURDIR)/out
+OUTPUT_FILE ?= ArchLinuxARM-NanoPi-Duo.img
 
-img: ArchLinuxARM-armv7-latest.tar.gz u-boot-build
-	guestfish -N out/ArchLinuxARM-NanoPi-Duo.img \
+UBOOT_OUTPUT_DIR ?= $(CURDIR)/tmp/u-boot-${BOARD_TARGET}
+
+$(OUTPUT_DIR)/$(OUTPUT_FILE): ArchLinuxARM-armv7-latest.tar.gz $(UBOOT_OUTPUT_DIR) $(OUTPUT_DIR)
+	guestfish -N $(OUTPUT_DIR)/$(OUTPUT_FILE)=disk:2G \
 	-a $(UBOOT_OUTPUT_DIR)/u-boot-sunxi-with-spl.bin -f create.gfs -x
 
-img.xz: img
+$(OUTPUT_DIR)/$(OUTPUT_FILE).xz: $(OUTPUT_DIR)/$(OUTPUT_FILE)
 	xz $<
+
+.PHONY: img.xz
+img.xz: $(OUTPUT_DIR)/$(OUTPUT_FILE).xz
 
 ArchLinuxARM-armv7-latest.tar.gz:
 	wget http://archlinuxarm.org/os/ArchLinuxARM-armv7-latest.tar.gz
 
-u-boot:
-	git clone --branch $(UBOOT_TAG) https://github.com/u-boot/u-boot.git $(UBOOT_DIR)
-	patch -p0 < patch/add-nanopi-duo.patch
-
-u-boot-build: u-boot
-	$(UBOOT_MAKE) $(UBOOT_DEFCONFIG)
-	$(UBOOT_MAKE) -j $$(nproc)
+$(OUTPUT_DIR):
+	mkdir -p $(OUTPUT_DIR)
 
 clean:
 	rm -rf out tmp
 
-superclean:
+superclean: clean
 	rm -rf u-boot ArchLinuxARM-armv7-latest.tar.gz
+
+include Makefile.uboot.mk
