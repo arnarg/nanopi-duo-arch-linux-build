@@ -1,0 +1,36 @@
+# Create partition table
+# see: https://linux-sunxi.org/Bootable_SD_card#SD_Card_Layout
+part-init /dev/sda mbr
+# boot
+part-add /dev/sda p 2048 206848
+part-set-bootable /dev/sda 1 true
+# root
+part-add /dev/sda p 206859 -1
+part-set-mbr-id /dev/sda 2 0x83
+
+# Format partitions
+mkfs ext3 /dev/sda1 label:boot
+mkfs ext4 /dev/sda2 label:linux-root
+
+list-filesystems
+
+# Setup boot and root
+mount /dev/sda2 /
+mkdir /boot
+mount /dev/sda1 /boot
+
+# Extract ArchLinuxARM-armv7-latest.tar.gz into image
+tar-in ArchLinuxARM-armv7-latest.tar.gz / compress:gzip xattrs:true selinux:true acls:true
+
+# Append boot partition to /etc/fstab
+write-append /etc/fstab "LABEL=boot /boot ext3 defaults 0 0"
+
+# Copy in extlinux.conf
+mkdir /boot/extlinux
+copy-in files/extlinux.conf /boot/extlinux
+
+# Copy in dtb
+copy-in tmp/u-boot-nanopi-duo/arch/arm/dts/sun8i-h2-plus-nanopi-duo.dtb /boot/dtbs
+
+# Write u-boot spl
+copy-device-to-device /dev/sdb /dev/sda destoffset:8192
